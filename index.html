@@ -1,0 +1,383 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <style>
+      #map {
+        height: 80%;
+        width: 80%;
+        margin-top: 10px;
+      }
+      .container {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        background: linear-gradient(#dfdc27, #43c532);
+      }
+      .containerTable {
+        height: 400px;
+        width: auto;
+        margin: 6px;
+        background-color: white;
+        overflow: auto;
+      }
+      table {
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      }
+      tr {
+        text-align: left;
+        color: black;
+      }
+      thead,
+      th {
+        background-color: #99b94e;
+        color: rgb(0, 0, 0);
+      }
+      .search-input {
+        text-align: left;
+        border: none;
+        width: 100px;
+      }
+
+      .button-54 {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 16px;
+        letter-spacing: 2px;
+        text-decoration: none;
+        text-transform: uppercase;
+        color: #000;
+        cursor: pointer;
+        border: 3px solid;
+        padding: 0.25em 0.5em;
+        box-shadow: 1px 1px 0px 0px, 2px 2px 0px 0px, 3px 3px 0px 0px,
+          4px 4px 0px 0px, 5px 5px 0px 0px;
+        position: relative;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+      }
+
+      .button-54:active {
+        box-shadow: 0px 0px 0px 0px;
+        top: 5px;
+        left: 5px;
+      }
+
+      @media (min-width: 768px) {
+        .button-54 {
+          padding: 0.25em 0.75em;
+        }
+        .search-id {
+          padding: 0.25em 0.75em;
+        }
+      }
+
+      .search-id {
+        box-shadow: 1px 1px 0px 0px, 2px 2px 0px 0px, 3px 3px 0px 0px,
+          4px 4px 0px 0px, 5px 5px 0px 0px;
+        color: #000;
+        cursor: text;
+        border: 3px solid;
+        width: 150;
+        font-family: 'Open Sans', sans-serif;
+        font-size: 20;
+        letter-spacing: 2px;
+        text-decoration: none;
+        top: 5px;
+        left: 5px;
+      }
+      h3 {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 20;
+        letter-spacing: 2px;
+        text-decoration: none;
+        color: white;
+      }
+      body {
+        font-family: 'Open Sans', sans-serif;
+        font-size: 20;
+        letter-spacing: 2px;
+        text-decoration: none;
+      }
+    </style>
+    <title>Maps</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="datos.js"></script>
+    <script src="grafo.js"></script>
+    <script src="ruta.js"></script>
+    <script src="places.js"></script>
+    <script src="build-table.js"></script>
+  </head>
+
+  <body
+    style="
+      background: linear-gradient(#dfdc27, #43c532);
+      color: black;
+      padding: 10px;
+    "
+  >
+    <nav class="navbar navbar-inverse">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#"
+            >GUÍA TURÍSTICA EN CUSCO USANDO DIJKSTRA</a
+          >
+        </div>
+      </div>
+    </nav>
+
+    <h3>BIENVENIDO AL BUSCADOR DE RUTAS</h3>
+    Ingrese CÓDIGO de a donde quiere ir:
+    <br />
+    <input
+      type="text"
+      id="end_point"
+      class="search-id"
+      placeholder="Código..."
+    />
+    <button id="getRoute" class="button-54">Buscar</button>
+    <div class="container">
+      <div id="map"></div>
+      <br />
+      <script
+        async
+        defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBH1p1UyBZ6aOXxwXxSBRjuYy4lVPm_ico&libraries=drawing&callback=initMap"
+      ></script>
+      <script>
+        var customLabel = {
+          terminal: {
+            label: 'T',
+          },
+        };
+
+        var cusco = {
+          lat: -13.516711,
+          lng: -71.978823,
+        };
+
+        var Path; // Polyline
+        var map;
+        function initMap() {
+          map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 18,
+            center: cusco,
+            mapTypeId: 'terrain',
+          });
+
+          map.data.loadGeoJson('./datos.json');
+
+          // This section downloads the xml datos generated and outputs the terminal T symbol on the marker
+
+          downloadUrl('./sql_to_xml.php', function (xml_datos) {
+            var xml = xml_datos.responseXML;
+            var markers = xml.documentElement.getElementsByTagName('marker');
+            Array.prototype.forEach.call(markers, function (markerElem) {
+              var id = markerElem.getAttribute('id');
+              var type = 'terminal';
+              var point = new google.maps.LatLng(
+                parseFloat(markerElem.getAttribute('lat')),
+                parseFloat(markerElem.getAttribute('lng'))
+              );
+
+              var icon = customLabel[type] || {};
+              var marker = new google.maps.Marker({
+                map: map,
+                position: point,
+                label: icon.label,
+              });
+            });
+
+            for (var i = 0; i < datos.features.length; i++) {
+              // Need to find a better way to compare if the T marker is placed already
+              var token = false;
+
+              var coords = datos.features[i].geometry.coordinates;
+              var latLng = new google.maps.LatLng(coords[1], coords[0]);
+
+              var lat_t = parseFloat(latLng.lat());
+              var lng_t = parseFloat(latLng.lng());
+
+              Array.prototype.forEach.call(markers, function (markerElem) {
+                var point = new google.maps.LatLng(
+                  Number(markerElem.getAttribute('lat')),
+                  parseFloat(markerElem.getAttribute('lng'))
+                );
+
+                var lat_p = Number(point.lat());
+                var lng_p = parseFloat(point.lng());
+
+                if (lat_t == lat_p && lng_t == lng_p) {
+                  token = true;
+                }
+              });
+
+              if (token == false) {
+                var marker = new google.maps.Marker({
+                  position: latLng,
+                  map: map,
+                });
+              }
+            }
+          });
+          /---------------------------------------------------------------------------------------------/;
+
+          Path = new google.maps.Polyline({
+            geodesic: true,
+            strokeColor: '#FF0000',
+            strokeOpacity: 1.0,
+            strokeWeight: 2,
+          });
+          Path.setMap(map);
+
+          // This section is related to the routing from entry to exit
+
+          var submit_button = document.getElementById('getRoute');
+
+          google.maps.event.addDomListener(submit_button, 'click', function () {
+            path_temp = route_setup();
+            console.log(path_temp);
+            for (var i = 0; i < path_temp.length; ++i) {
+              var latLng_temp = new google.maps.LatLng(
+                path_temp[i].lat,
+                path_temp[i].lng
+              );
+              var line = Path.getPath();
+              line.push(latLng_temp);
+            }
+          });
+          console.log(path_temp);
+        }
+
+        function downloadUrl(url, callback) {
+          var request = window.ActiveXObject
+            ? new ActiveXObject('Microsoft.XMLHTTP')
+            : new XMLHttpRequest();
+
+          request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+              request.onreadystatechange = doNothing;
+              callback(request, request.status);
+            }
+          };
+
+          request.open('GET', url, true);
+          request.send(null);
+        }
+
+        function doNothing() {}
+      </script>
+
+      <div class="containerTable">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>
+                <input
+                  type="text"
+                  class="search-input"
+                  placeholder="Buscar..."
+                />
+              </th>
+              <th>Código</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Catedral del Cusco</td>
+              <td>9</td>
+            </tr>
+            <tr>
+              <td>Piedra de 12 Ángulos</td>
+              <td>12</td>
+            </tr>
+            <tr>
+              <td>Plaza Regocijo</td>
+              <td>16</td>
+            </tr>
+            <tr>
+              <td>Templo de la Merced</td>
+              <td>20</td>
+            </tr>
+            <tr>
+              <td>Plaza San Francisco</td>
+              <td>25</td>
+            </tr>
+            <tr>
+              <td>Mercado San Pedro 1° puerta</td>
+              <td>32</td>
+            </tr>
+            <tr>
+              <td>Mercado San Pedro 2° puerta</td>
+              <td>33</td>
+            </tr>
+            <tr>
+              <td>Mercado San Pedro 3° puerta</td>
+              <td>35</td>
+            </tr>
+            <tr>
+              <td>Iglesia San Pedro</td>
+              <td>34</td>
+            </tr>
+            <tr>
+              <td>Qoricancha</td>
+              <td>41</td>
+            </tr>
+            <tr>
+              <td>Templo de Qoricancha</td>
+              <td>42</td>
+            </tr>
+            <tr>
+              <td>La Paccha</td>
+              <td>49</td>
+            </tr>
+            <tr>
+              <td>Centro Artesanal Cusco</td>
+              <td>50</td>
+            </tr>
+            <tr>
+              <td>Limacpampa</td>
+              <td>53</td>
+            </tr>
+            <tr>
+              <td>Mirador San Cristobal</td>
+              <td>61</td>
+            </tr>
+            <tr>
+              <td>Mercado San Pedro 4° puerta</td>
+              <td>62</td>
+            </tr>
+            <tr>
+              <td>Mercado San Pedro 5° puerta</td>
+              <td>63</td>
+            </tr>
+            <tr>
+              <td>Iglesia San Francisco de Asís</td>
+              <td>26</td>
+            </tr>
+            <tr>
+              <td>Iglesia San Blas</td>
+              <td>70</td>
+            </tr>
+            <tr>
+              <td>Plaza San Blas</td>
+              <td>71</td>
+            </tr>
+            <tr>
+              <td>Mirador San Blas</td>
+              <td>75</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </body>
+</html>
